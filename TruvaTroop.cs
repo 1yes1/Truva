@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Bannerlord.ButterLib.ObjectSystem.Extensions;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using TaleWorlds.CampaignSystem;
@@ -16,19 +17,37 @@ namespace Truva
 {
     public class TruvaTroop 
     {
-        [SaveableField(1)] private CharacterObject _troopLeader;
-        [SaveableField(2)] private TroopRoster _truvaTroop;
-        [SaveableField(3)] private int _memberCount;
-        [SaveableField(4)] private string _settlementId;
-        [SaveableField(5)] private bool _isAtWar = false;
+        [SaveableField(1)]
+        private CharacterObject _troopLeader;
 
-        public TruvaTroop(CharacterObject troopLeader, TroopRoster truvaTroop, string settlementId)
+        [SaveableField(2)]
+        private TroopRoster _troopRoster;
+
+        [SaveableField(3)]
+        private List<TroopRoster> _onWayTroops = new List<TroopRoster>();
+
+        [SaveableField(4)]
+        private string _settlementId;
+
+        [SaveableField(5)]
+        private bool _isAtWar = false;
+
+        [SaveableField(6)]
+        private bool _isArrivedToSettlement = false;
+
+        public TruvaTroop(CharacterObject troopLeader, TroopRoster truvaTroopRoster, string settlementId)
         {
             troopLeader.HeroObject.ChangeState(Hero.CharacterStates.Disabled);
 
             _troopLeader = troopLeader;
-            _truvaTroop = truvaTroop;
+            _troopRoster = truvaTroopRoster;
             _settlementId = settlementId;
+            _isArrivedToSettlement = false;
+
+            for (int i = 0; i < _troopRoster.Count; i++)
+            {
+                _troopRoster.GetCharacterAtIndex(i).SetFlag("TruvaTroop");
+            }
         }
 
         public TextObject SettlementName
@@ -43,15 +62,15 @@ namespace Truva
 
         public int MemberCount
         {
-            get { return _memberCount; }
+            get { return TroopRoster.Count; }
         }
 
         public TroopRoster TroopRoster
         {
-            get { return _truvaTroop; }
+            get { return _troopRoster; }
             set
             {
-                _truvaTroop = value;
+                _troopRoster = value;
             }
         }
 
@@ -68,6 +87,38 @@ namespace Truva
         {
             get => _isAtWar;
             set { _isAtWar = value; }
+        }
+
+        public bool IsArrivedToSettlement
+        {
+            get { return _isArrivedToSettlement; }
+            set { _isArrivedToSettlement = value; }
+        }
+
+        public bool IsOnTheWay { get; set; }
+
+
+        public void AddOnWayTroop(TroopRoster troopRoster)
+        {
+            if(_onWayTroops == null)
+                _onWayTroops = new List<TroopRoster>();
+
+            IsOnTheWay = true;
+
+            _onWayTroops.Add(troopRoster);
+        }
+
+        public void AddToTruvaTroop(TroopRoster troopRoster)
+        {
+            if(_onWayTroops.Contains(troopRoster))
+                _onWayTroops.Remove(troopRoster);
+
+            for (int i = 0; i < troopRoster.Count; i++)
+                troopRoster.GetCharacterAtIndex(i).SetFlag("TruvaTroop");
+
+            InformationManager.DisplayMessage(new InformationMessage("AddToTruvaTroop On Way: ", Colors.Green));
+
+            _troopRoster.Add(troopRoster);
         }
 
         public class TruvaTroopTypeDefiner : SaveableTypeDefiner

@@ -22,13 +22,13 @@
     <PackageReference Include="BUTR.Harmony.Analyzer" Version="1.0.1.50" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
     <PackageReference Include="Bannerlord.UIExtenderEx" Version="2.8.0" IncludeAssets="compile" />
     <PackageReference Include="Bannerlord.ButterLib" Version="2.8.11" IncludeAssets="compile" />
-    <PackageReference Include="Bannerlord.ReferenceAssemblies.Core" Version="1.2.1.22001-beta" PrivateAssets="All" />
-    <PackageReference Include="Bannerlord.ReferenceAssemblies.Native" Version="1.2.1.22001-beta" PrivateAssets="All" />
-    <PackageReference Include="Bannerlord.ReferenceAssemblies.StoryMode" Version="1.2.1.22001-beta" PrivateAssets="All" />
-    <PackageReference Include="Bannerlord.ReferenceAssemblies.SandBox" Version="1.2.1.22001-beta" PrivateAssets="All" />
-    <PackageReference Include="Bannerlord.ReferenceAssemblies.CustomBattle" Version="1.2.1.22001-beta" PrivateAssets="All" />
-    <PackageReference Include="Bannerlord.ReferenceAssemblies.BirthAndDeath" Version="1.2.1.22001-beta" PrivateAssets="All" />
-    <PackageReference Include="Newtonsoft.Json" Version="11.0.2" PrivateAssets="all" IncludeAssets="compile" />
+    <PackageReference Include="Bannerlord.ReferenceAssemblies.Core" Version="1.1.5.21456" PrivateAssets="All" />
+    <PackageReference Include="Bannerlord.ReferenceAssemblies.Native" Version="1.1.5.21456" PrivateAssets="All" />
+    <PackageReference Include="Bannerlord.ReferenceAssemblies.StoryMode" Version="1.1.5.21456" PrivateAssets="All" />
+    <PackageReference Include="Bannerlord.ReferenceAssemblies.SandBox" Version="1.1.5.21456" PrivateAssets="All" />
+    <PackageReference Include="Bannerlord.ReferenceAssemblies.CustomBattle" Version="1.1.5.21456" PrivateAssets="All" />
+    <PackageReference Include="Bannerlord.ReferenceAssemblies.BirthAndDeath" Version="1.1.5.21456" PrivateAssets="All" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" PrivateAssets="all" IncludeAssets="compile" />
   </ItemGroup>
 
 </Project>

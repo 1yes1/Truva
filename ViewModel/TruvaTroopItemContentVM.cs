@@ -14,7 +14,7 @@ namespace Truva.ViewModel
     internal class TruvaTroopItemContentVM : TaleWorlds.Library.ViewModel
     {
         private TruvaTroop _truvaTroop;
-        TruvaTroopVM _truvaTroopVM;
+        private TruvaTroopVM _truvaTroopVM;
 
         public TruvaTroopItemContentVM(TruvaTroopVM truvaTroopVM,TruvaTroop truvaTroop)
         {
@@ -48,8 +48,7 @@ namespace Truva.ViewModel
         {
             //InformationManager.DisplayMessage(new InformationMessage("Edit Troop", Colors.Magenta));
             ScreenManager.PopScreen();
-
-            TruvaTroopMenu truvaTroopMenuManager = new TruvaTroopMenu(_truvaTroop, OnTruvaTroopMenuDoneClicked, OnTruvaTroopDestroyed);
+            Campaign.Current.GetCampaignBehavior<TruvaCampaignBehavior>().OpenTruvaTroopMenu(true,_truvaTroop, Settlement.Find(_truvaTroop.SettlementId));
         }
 
         public void RemoveTroop()
@@ -63,25 +62,30 @@ namespace Truva.ViewModel
             //_truvaTroopVM.RefreshValues();
         }
 
+        [DataSourceProperty]
+        public bool IsOnTheWay { get => _truvaTroop.IsOnTheWay; }
 
-        private void OnTruvaTroopMenuDoneClicked(CharacterObject troopLeader, TroopRoster troopRoster)
-        {
-            _truvaTroop.TroopRoster = troopRoster;
-            //_truvaTroopVM.RefreshValues();
-            //Task.Delay(1000).ContinueWith(t => PushScreenAgain());
-        }
 
-        private void OnTruvaTroopDestroyed(string settlementId)
-        {
-            Campaign.Current.GetCampaignBehavior<TruvaCampaignBehavior>().RemoveTruvaTroop(_truvaTroop);
+        [DataSourceProperty]
+        public bool IsWayTextVisible { get => !_truvaTroop.IsOnTheWay; }
 
-            Task.Delay(1000).ContinueWith(t => PushScreenAgain());
-        }
 
-        private void PushScreenAgain()
-        {
-            ScreenManager.PushScreen(ViewCreatorManager.CreateScreenView<TruvaTroopScreen>());
-        }
+        /*
+         Bu kısımda hızlıca güncelleme gerektiği için tekrar push etme gerek onu bi düşün nasıl yapılabilir de buradan bağımsızlaştırılabilir
+         */
+
+
+        //private void OnTruvaTroopDestroyed(string settlementId)
+        //{
+        //    Campaign.Current.GetCampaignBehavior<TruvaCampaignBehavior>().RemoveTruvaTroop(_truvaTroop);
+
+        //    Task.Delay(1000).ContinueWith(t => PushScreenAgain());
+        //}
+
+        //private void PushScreenAgain()
+        //{
+        //    ScreenManager.PushScreen(ViewCreatorManager.CreateScreenView<TruvaTroopScreen>());
+        //}
 
     }
 }

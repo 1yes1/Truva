@@ -4,8 +4,10 @@ using System.Collections.Generic;
 using System.Text;
 using TaleWorlds.Engine.GauntletUI;
 using TaleWorlds.GauntletUI;
+using TaleWorlds.GauntletUI.BaseTypes;
 using TaleWorlds.GauntletUI.Data;
 using TaleWorlds.Library;
+using TaleWorlds.MountAndBlade.GauntletUI.Widgets;
 using TaleWorlds.ScreenSystem;
 
 namespace Truva.ViewModel
@@ -18,20 +20,17 @@ namespace Truva.ViewModel
 
         public TruvaTroopScreen( )
         {
+
         }
 
         protected override void OnInitialize()
         {
             base.OnInitialize();
             _dataSource = new TruvaTroopVM();
-            _gauntletLayer = new GauntletLayer(100)
-            {
-                IsFocusLayer = true
-            };
+            _gauntletLayer = new GauntletLayer(100);
             AddLayer(_gauntletLayer);
             _gauntletLayer.InputRestrictions.SetInputRestrictions();
             _movie = _gauntletLayer.LoadMovie("TruvaTroopMenu", _dataSource);
-            //InformationManager.DisplayMessage(new InformationMessage("LoadMovie", Colors.Magenta));
         }
 
         protected override void OnActivate()

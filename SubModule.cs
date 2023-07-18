@@ -21,6 +21,11 @@ namespace Truva
 
         private TruvaSiegeMissionView _truvaSiegeMissionView;
 
+        protected override void OnBeforeInitialModuleScreenSetAsRoot()
+        {
+            AccessTools.Field(typeof(TaleWorlds.MountAndBlade.Module), "_splashScreenPlayed").SetValue(TaleWorlds.MountAndBlade.Module.CurrentModule, true);
+        }
+
         protected override void OnSubModuleLoad()
         {
             base.OnSubModuleLoad();

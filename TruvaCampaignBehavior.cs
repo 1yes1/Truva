@@ -2,23 +2,24 @@
 using System.Collections.Generic;
 
 using TaleWorlds.CampaignSystem;
+using TaleWorlds.CampaignSystem.Actions;
 using TaleWorlds.CampaignSystem.GameMenus;
 using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Roster;
 using TaleWorlds.CampaignSystem.Settlements;
+using TaleWorlds.CampaignSystem.ViewModelCollection;
 using TaleWorlds.Core;
 using TaleWorlds.Library;
 using TaleWorlds.Localization;
 using TaleWorlds.MountAndBlade;
+using TaleWorlds.MountAndBlade.View;
+using TaleWorlds.ScreenSystem;
+using Truva.ViewModel;
 
 namespace Truva
 {
     public class TruvaCampaignBehavior : CampaignBehaviorBase
     {
-        private const float _truvaTroopSpeed = 5;
-        
-        private const float _speedMultiplier = 20;
-
         private float _startMissionTime = 0;
         
         private float _timeDelay = 1;
@@ -29,26 +30,23 @@ namespace Truva
         
         private List<TruvaTimeChecker> _truvaTimeCheckers = new List<TruvaTimeChecker>();
 
-        private bool _isTruvaTroopAlreadyExist = false;
+        private TroopRoster _managingOldTruvaTroopRoster;
+
+        private TroopRoster _managingOldPlayerTroopRoster;
 
         public override void RegisterEvents()
         {
-            CampaignEvents.OnGameLoadedEvent.AddNonSerializedListener(this,OnGameLoaded);
-
             CampaignEvents.OnSessionLaunchedEvent.AddNonSerializedListener(this,OnSessionLaunched);
 
             CampaignEvents.HourlyTickEvent.AddNonSerializedListener(this, HourlyTick);
 
             CampaignEvents.OnMissionStartedEvent.AddNonSerializedListener(this, OnMissionStarted);
-
         }
 
         public override void SyncData(IDataStore dataStore)
         {
             dataStore.SyncData<List<TruvaTroop>>("_truvaTroops", ref _truvaTroops);
         }
-
-
 
         public static List<TruvaTroop> TruvaTroops
         {
@@ -62,16 +60,30 @@ namespace Truva
             }
         }
 
-        public bool IsTruvaTroopAlreadyExist
+        public void OpenTruvaTroopMenu(bool _isManaging, TruvaTroop truvaTroop = null, Settlement settlement = null)
         {
-            get
+            TruvaTroopMenu truvaTroopMenuManager;
+
+            if (_isManaging)
             {
-                return _isTruvaTroopAlreadyExist;
+                _managingOldTruvaTroopRoster = truvaTroop.TroopRoster.CloneRosterData();
+                _managingOldPlayerTroopRoster = PartyBase.MainParty.MemberRoster.CloneRosterData();
+                truvaTroopMenuManager = new TruvaTroopMenu(truvaTroop, OnTruvaTroopMenuDoneClicked, null);
             }
-            set
-            {
-                _isTruvaTroopAlreadyExist = value;
-            }
+            else
+                truvaTroopMenuManager = new TruvaTroopMenu(OnTruvaTroopMenuDoneClicked, null, settlement);
+        }
+
+        public void OpenChooseSettlementMenu()
+        {
+            ScreenManager.PopScreen();
+            TruvaChooseSettlementMenu truvaChooseSettlementMenu = new TruvaChooseSettlementMenu(OnSettlementChoosed, OnSettlementChooseCanceled);
+        }
+
+
+        public void RemoveFromTimeCheckers(TruvaTimeChecker truvaTimeChecker)
+        {
+            _truvaTimeCheckers.Remove(truvaTimeChecker);
         }
 
         private void OnSessionLaunched(CampaignGameStarter campaignGameStarter)
@@ -96,43 +108,78 @@ namespace Truva
         private void TruvaTroopMenuConsequence(MenuCallbackArgs args)
         {
             TruvaTroop truvaTroop;
-            TruvaTroopMenu truvaTroopMenuManager;
 
             if((truvaTroop = TruvaHelper.FindTruvaTroop(Hero.MainHero.CurrentSettlement.StringId)) == null)
-            {
-                truvaTroopMenuManager = new TruvaTroopMenu(OnTruvaTroopMenuDoneClicked,null);
-                this._isTruvaTroopAlreadyExist = false;
-            }
+                OpenTruvaTroopMenu(false,null, Hero.MainHero.CurrentSettlement);
             else
-            {
-                truvaTroopMenuManager = new TruvaTroopMenu(truvaTroop, OnTruvaTroopMenuDoneClicked, null);
-                this._isTruvaTroopAlreadyExist = true;
-            }
+                OpenTruvaTroopMenu(true,truvaTroop);
         }
 
-        private void OnTruvaTroopMenuDoneClicked(CharacterObject troopLeader, TroopRoster troopRoster)
+        private void OnTruvaTroopMenuDoneClicked(CharacterObject troopLeader, TroopRoster troopRoster, Settlement settlement, bool _isNewlyCreated)
         {
+            TruvaTroop truvaTroop;
 
-            if (_isTruvaTroopAlreadyExist)
+            Tuple<CampaignTime, string, float> tuple;
+
+            if (!_isNewlyCreated)//Managing
             {
-                TruvaTroop truvaTroop = TruvaHelper.FindTruvaTroop(troopLeader);
-                if(truvaTroop != null)
-                    truvaTroop.TroopRoster = troopRoster;
+                 truvaTroop = TruvaHelper.FindTruvaTroop(troopLeader);
+
+                truvaTroop.TroopRoster = _managingOldTruvaTroopRoster;
+
+                TroopRoster newlyAddedTroopRoster = TruvaHelper.GetNewlyAddedTroopRoster(_managingOldTruvaTroopRoster,troopRoster);
+
+                if (newlyAddedTroopRoster.TotalManCount <= 0)
+                    return;
+
+                truvaTroop.AddOnWayTroop(newlyAddedTroopRoster);
+
+                tuple = TruvaHelper.GetReachTimeToSettlement(Hero.MainHero, Settlement.Find(truvaTroop.SettlementId));
+                
+                CampaignTime campaignTime = tuple.Item1;
+
+                TruvaTimeChecker timeChecker = new TruvaTimeChecker(campaignTime, truvaTroop, newlyAddedTroopRoster, AddToTruvaTroop);
+
+                _truvaTimeCheckers.Add(timeChecker);
             }
-            else
+            else 
             {
-                TruvaTroop truvaTroop = new TruvaTroop(troopLeader, troopRoster, Hero.MainHero.CurrentSettlement.StringId);
+                truvaTroop = new TruvaTroop(troopLeader, troopRoster, settlement.StringId);
+
                 _truvaTroops.Add(truvaTroop);
-                InformationManager.DisplayMessage(new InformationMessage("Truva Troop Created: " + _truvaTroops[_truvaTroops.Count - 1].SettlementName, Colors.Green));
+
+                tuple = TruvaHelper.GetReachTimeToSettlement(Hero.MainHero, Settlement.Find(truvaTroop.SettlementId));
+
+                CampaignTime campaignTime = tuple.Item1;
+
+                TruvaTimeChecker timeChecker = new TruvaTimeChecker(campaignTime, truvaTroop, null, AddTroopToSettlement);
+
+                _truvaTimeCheckers.Add(timeChecker);
             }
+
+
+            if (_isNewlyCreated)
+                InformationManager.DisplayMessage(new InformationMessage("Created Truva Troop will arrive " + truvaTroop.SettlementName + " in " + tuple.Item2, Colors.Green));
+            else
+                InformationManager.DisplayMessage(new InformationMessage("Added troops will arrive " + truvaTroop.SettlementName + " in " + tuple.Item2, Colors.Green));
         }
 
-
-        private void OnGameLoaded(CampaignGameStarter campaignGameStarter)
+        private void OnSettlementChoosed(List<InquiryElement> settlements)
         {
-            InformationManager.DisplayMessage(new InformationMessage("Truva GameLoaded", Colors.Green));
+            if (settlements == null || settlements.Count <= 0)
+                return;
+
+            Settlement settlement = (Settlement)settlements[0].Identifier;
+
+            ScreenManager.PushScreen(ViewCreatorManager.CreateScreenView<TruvaTroopScreen>());
+            TruvaTroopMenu truvaTroopMenu = new TruvaTroopMenu(OnTruvaTroopMenuDoneClicked, null, settlement);
+
         }
 
+        private void OnSettlementChooseCanceled(List<InquiryElement> settlements)
+        {
+            ScreenManager.PushScreen(ViewCreatorManager.CreateScreenView<TruvaTroopScreen>());
+        }
 
         private void OnMissionStarted(IMission mission)
         {
@@ -140,26 +187,23 @@ namespace Truva
 
         }
 
-
         public void RemoveTruvaTroop(TruvaTroop truvaTroop)
         {
             TruvaTroops.Remove(truvaTroop);
 
-            Settlement settlement = Settlement.Find(truvaTroop.SettlementId);
-            float distance = settlement.GetPosition().Distance(Hero.MainHero.GetPosition());
+            Tuple<CampaignTime,string,float> tuple = TruvaHelper.GetReachTimeToSettlement(Hero.MainHero, Settlement.Find(truvaTroop.SettlementId));
 
-            int day = (int) Math.Max(1, Math.Round(distance / (_truvaTroopSpeed * _speedMultiplier)));
+            CampaignTime campaignTime = tuple.Item1;
 
-            CampaignTime campaignTime = CampaignTime.DaysFromNow(day);
+            TruvaTimeChecker timeChecker = new TruvaTimeChecker(campaignTime, truvaTroop,null, AddTroopToMainParty);
 
-            InformationManager.DisplayMessage(new InformationMessage(truvaTroop.SettlementName+" Truva Troops will join your party in " + day + " day.", Colors.Cyan));
-
-            TruvaTimeChecker timeChecker = new TruvaTimeChecker(campaignTime, truvaTroop, AddTroopToMainParty);
             _truvaTimeCheckers.Add(timeChecker);
+
+            InformationManager.DisplayMessage(new InformationMessage("Removed Truva Troop will arrive your party in " + tuple.Item2, Colors.Green));
         }
 
 
-        private void AddTroopToMainParty(TruvaTroop truvaTroop,TruvaTimeChecker truvaTimeChecker)
+        private void AddTroopToMainParty(TruvaTroop truvaTroop,TroopRoster troopRoster)
         {
             //InformationManager.DisplayMessage(new InformationMessage("Troop Eklendi : " + truvaTroop.TroopRoster.TotalManCount, Colors.Green));
             TextObject message = new TextObject(truvaTroop.SettlementName+" Truva Troops rejoined your party", null);
@@ -167,7 +211,22 @@ namespace Truva
             MBInformationManager.AddQuickInformation(message, 0, truvaTroop.TroopLeader.CharacterObject, "");
             PartyBase.MainParty.MemberRoster.Add(truvaTroop.TroopRoster);
 
-            _truvaTimeCheckers.Remove(truvaTimeChecker);
+        }
+
+        private void AddTroopToSettlement(TruvaTroop truvaTroop, TroopRoster troopRoster)
+        {
+            //InformationManager.DisplayMessage(new InformationMessage("Troop Eklendi : " + truvaTroop.TroopRoster.TotalManCount, Colors.Green));
+            TextObject message = new TextObject(truvaTroop.SettlementName + " Truva Troops entered "+truvaTroop.SettlementName, null);
+
+            MBInformationManager.AddQuickInformation(message, 0, truvaTroop.TroopLeader.CharacterObject, "");
+
+            truvaTroop.IsArrivedToSettlement = true;
+
+        }
+
+        private void AddToTruvaTroop(TruvaTroop targetTruvaTroop,TroopRoster troopRoster)
+        {
+            targetTruvaTroop.AddToTruvaTroop(troopRoster);
         }
 
         private void HourlyTick()

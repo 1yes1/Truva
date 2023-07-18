@@ -3,21 +3,28 @@ using System.Collections.Generic;
 using System.Text;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Party;
+using TaleWorlds.CampaignSystem.Roster;
 using TaleWorlds.Library;
+using Truva.ViewModel;
 
 namespace Truva
 {
-    internal class TruvaTimeChecker
+    public class TruvaTimeChecker
     {
         private CampaignTime _targetCampaignTime;
-        TruvaTroop _truvaTroop;
 
-        private event Action<TruvaTroop,TruvaTimeChecker> OnTimeIsUp;
+        private TruvaTroop _truvaTroop;
 
-        public TruvaTimeChecker(CampaignTime targetCampaignTime,TruvaTroop truvaTroop, Action<TruvaTroop,TruvaTimeChecker> action)
+        private TroopRoster _troopRoster;
+
+        private event Action<TruvaTroop,TroopRoster> OnTimeIsUp;
+
+        public TruvaTimeChecker(CampaignTime targetCampaignTime,TruvaTroop truvaTroop,TroopRoster troopRoster, Action<TruvaTroop,TroopRoster> action)
         {
             _targetCampaignTime = targetCampaignTime;
             _truvaTroop = truvaTroop;
+            _troopRoster = troopRoster;
+            _truvaTroop.IsOnTheWay = true;
             OnTimeIsUp += action;
         }
 
@@ -25,7 +32,9 @@ namespace Truva
         {
             if (_targetCampaignTime <= CampaignTime.Now)
             {
-                OnTimeIsUp?.Invoke(_truvaTroop,this);
+                OnTimeIsUp?.Invoke(_truvaTroop,_troopRoster);
+                Campaign.Current.GetCampaignBehavior<TruvaCampaignBehavior>().RemoveFromTimeCheckers(this);
+                _truvaTroop.IsOnTheWay = false;
             }
         }
 
