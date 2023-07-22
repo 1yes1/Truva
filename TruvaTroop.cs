@@ -65,15 +65,6 @@ namespace Truva
             get { return TroopRoster.Count; }
         }
 
-        public TroopRoster TroopRoster
-        {
-            get { return _troopRoster; }
-            set
-            {
-                _troopRoster = value;
-            }
-        }
-
         public Hero TroopLeader
         {
             get
@@ -82,20 +73,46 @@ namespace Truva
             }
         }
 
+        public IFaction SettlementOwner
+        {
+            get
+            {
+                return Settlement.Find(_settlementId).OwnerClan.MapFaction;
+            }
+        }
 
+        public int OnWayTroopCount => _onWayTroops.Count;
+
+        [SaveableProperty(1)]
         public bool IsAtWar
         {
             get => _isAtWar;
             set { _isAtWar = value; }
         }
 
+        [SaveableProperty(2)]
         public bool IsArrivedToSettlement
         {
             get { return _isArrivedToSettlement; }
             set { _isArrivedToSettlement = value; }
         }
 
+        [SaveableProperty(3)]
         public bool IsOnTheWay { get; set; }
+
+        [SaveableProperty(4)]
+        public bool IsRemoving { get; set; }
+
+
+        [SaveableProperty(5)]
+        public TroopRoster TroopRoster
+        {
+            get { return _troopRoster; }
+            set
+            {
+                _troopRoster = value;
+            }
+        }
 
 
         public void AddOnWayTroop(TroopRoster troopRoster)
@@ -116,26 +133,16 @@ namespace Truva
             for (int i = 0; i < troopRoster.Count; i++)
                 troopRoster.GetCharacterAtIndex(i).SetFlag("TruvaTroop");
 
-            InformationManager.DisplayMessage(new InformationMessage("AddToTruvaTroop On Way: ", Colors.Green));
+            //InformationManager.DisplayMessage(new InformationMessage("AddToTruvaTroop On Way: ", Colors.Green));
 
             _troopRoster.Add(troopRoster);
         }
 
-        public class TruvaTroopTypeDefiner : SaveableTypeDefiner
+
+        public void OnTimeIsUp()
         {
-            public TruvaTroopTypeDefiner() : base(1984999991) { }
-
-            protected override void DefineClassTypes()
-            {
-                base.AddClassDefinition(typeof(TruvaTroop), 1);
-            }
-
-            protected override void DefineContainerDefinitions()
-            {
-                ConstructContainerDefinition(typeof(List<TruvaTroop>));
-            }
+            IsOnTheWay = false;
         }
-
 
     }
 

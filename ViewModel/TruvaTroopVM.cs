@@ -8,6 +8,7 @@ using TaleWorlds.Library;
 using TaleWorlds.Localization;
 using TaleWorlds.MountAndBlade;
 using TaleWorlds.ScreenSystem;
+using Truva.CampaignBehaviors;
 
 namespace Truva.ViewModel
 {
@@ -17,7 +18,7 @@ namespace Truva.ViewModel
 
         private string _truvaTroopsText;
 
-        TruvaTroopMenu _truvaTroopMenuManager;
+        TruvaTroopManageMenu _truvaTroopMenuManager;
 
         public TruvaTroopVM()
         {
@@ -43,10 +44,6 @@ namespace Truva.ViewModel
         public void ExecuteCreateTruvaTroop()
         {
             Campaign.Current.GetCampaignBehavior<TruvaCampaignBehavior>().OpenChooseSettlementMenu();
-
-            //Burada şehir seçileceği için yeni bir basevm ve itemvm gerekebilir
-            //Campaign.Current.GetCampaignBehavior<TruvaCampaignBehavior>().CreateTruvaTroopMenu(false);
-            InformationManager.DisplayMessage(new InformationMessage("Truva Troops Creating!", Colors.Magenta));
         }
 
         [DataSourceProperty]

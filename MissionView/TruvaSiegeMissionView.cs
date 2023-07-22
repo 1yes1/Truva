@@ -1,11 +1,14 @@
 ﻿using System;
+using TaleWorlds.CampaignSystem;
+using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.Engine.GauntletUI;
 using TaleWorlds.GauntletUI.Data;
 using TaleWorlds.Library;
 using TaleWorlds.MountAndBlade;
 using TaleWorlds.MountAndBlade.View.Screens;
 using TaleWorlds.TwoDimension;
-using static Truva.TruvaSiegeAttackLogic;
+using Truva.MissionBehaviors;
+using static Truva.MissionBehaviors.TruvaSiegeAttackLogic;
 
 namespace Truva.MissionView
 {
@@ -46,6 +49,10 @@ namespace Truva.MissionView
 
         public override void OnDeploymentFinished()
         {
+            //Yani bu yerleşkede truva troop yoksa UI görünmesin
+            if (!_truvaSiegeLogic.HasTruvaTroop)
+                return;
+
             _truvaInputManager.OnChooseAttackTypeKeyPressing += ToggleLayer;
         }
 
@@ -91,13 +98,18 @@ namespace Truva.MissionView
 
         public void ToggleLayer(bool _isPressing)
         {
-            if (Agent.Main == null || !Agent.Main.IsActive())
-                return;
+            //if (Agent.Main == null || !Agent.Main.IsActive())
+            //    return;
 
             if (!_isActive)
             {
                 _matrixFrame = MissionScreen.CombatCamera.Frame;
-                _matrixFrame.rotation.u.z = Agent.Main.LookDirection.z;
+
+                if (Agent.Main != null && Agent.Main.IsActive())
+                    _matrixFrame.rotation.u.z = Agent.Main.LookDirection.z;
+                else
+                    _matrixFrame.rotation.u.z = 0;
+
             }
 
             _isActive = _isPressing;

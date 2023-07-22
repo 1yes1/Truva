@@ -6,13 +6,14 @@ using TaleWorlds.Core;
 using TaleWorlds.InputSystem;
 using TaleWorlds.Library;
 using TaleWorlds.MountAndBlade;
+using Truva.CampaignBehaviors;
+using Truva.MissionBehaviors;
 using Truva.MissionView;
 
 namespace Truva
 {
     public class SubModule : MBSubModuleBase
     {
-
         private TruvaSiegeLogic _siegeLogic;
 
         private TruvaSiegeAttackLogic _siegeAttackLogic;
@@ -46,15 +47,16 @@ namespace Truva
             if (game.GameType is Campaign)
             {
                 CampaignGameStarter campaignStarter = (CampaignGameStarter)gameStarterObject;
-
+                
                 campaignStarter.AddBehavior(new TruvaCampaignBehavior());
+                campaignStarter.AddBehavior(new TruvaTroopsControllerCampaignBehavior());
             }
 
 
             InformationManager.DisplayMessage(new InformationMessage("REAL Truva Mod ENABLED", Colors.Green));
         }
 
-        public override void OnMissionBehaviorInitialize(Mission mission)
+        public override void OnMissionBehaviorInitialize(TaleWorlds.MountAndBlade.Mission mission)
         {
             base.OnMissionBehaviorInitialize(mission);
             mission.AddMissionBehavior(_siegeLogic = new TruvaSiegeLogic());

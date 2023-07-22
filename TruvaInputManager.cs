@@ -1,8 +1,8 @@
 ﻿using System;
 using TaleWorlds.InputSystem;
 using TaleWorlds.MountAndBlade;
-using static Truva.TruvaSiegeAttackLogic;
-using static Truva.TruvaSiegeLogic;
+using static Truva.MissionBehaviors.TruvaSiegeAttackLogic;
+using static Truva.MissionBehaviors.TruvaSiegeLogic;
 
 namespace Truva
 {

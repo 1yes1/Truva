@@ -1,18 +1,13 @@
-﻿using Bannerlord.ButterLib.Common.Extensions;
-using Bannerlord.ButterLib.DistanceMatrix;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using TaleWorlds.CampaignSystem;
-using TaleWorlds.CampaignSystem.CampaignBehaviors;
 using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Roster;
 using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.CampaignSystem.ViewModelCollection;
 using TaleWorlds.Library;
-using TaleWorlds.MountAndBlade;
 using TaleWorlds.ObjectSystem;
-using Truva.ViewModel;
+using Truva.CampaignBehaviors;
 
 namespace Truva
 {
@@ -54,6 +49,19 @@ namespace Truva
             return null;
         }
 
+        public static List<TruvaTroop> GetTruvaTroopsInFaction(IFaction faction)
+        {
+            List<TruvaTroop> truvaTroops = new List<TruvaTroop>();
+
+            for (int i = 0; i < TruvaCampaignBehavior.TruvaTroops.Count; i++)
+            {
+                if (TruvaCampaignBehavior.TruvaTroops[i].SettlementOwner == faction)
+                    truvaTroops.Add(TruvaCampaignBehavior.TruvaTroops[i]);
+            }
+
+            return truvaTroops;
+        }
+
         public static bool IsHeroInTruvaTroop(CharacterObject character)
         {
             bool result = false;
@@ -89,20 +97,32 @@ namespace Truva
 
         public static TroopRoster GetNewlyAddedTroopRoster(TroopRoster oldTroopRoster,TroopRoster fullRoster)
         {
+            TroopRoster newlyAddedTroops = fullRoster.CloneRosterData();
             for (int i = 0; i < oldTroopRoster.Count; i++)
             {
                 //InformationManager.DisplayMessage(new InformationMessage("GetElementCopyAtIndex(" + i + ").Name : " + oldTroopRoster.GetElementCopyAtIndex(i).Character.Name + " Count: " + oldTroopRoster.GetElementCopyAtIndex(i).Number, Colors.Green));
-                if(fullRoster.Contains(oldTroopRoster.GetElementCopyAtIndex(i).Character))
+                if(newlyAddedTroops.Contains(oldTroopRoster.GetElementCopyAtIndex(i).Character))
                 {
-                    int newNumberOfCharacter = fullRoster.GetElementCopyAtIndex(fullRoster.FindIndexOfTroop(oldTroopRoster.GetElementCopyAtIndex(i).Character)).Number;
+                    int newNumberOfCharacter = newlyAddedTroops.GetElementCopyAtIndex(newlyAddedTroops.FindIndexOfTroop(oldTroopRoster.GetElementCopyAtIndex(i).Character)).Number;
                     int oldNumberOfCharacter = oldTroopRoster.GetElementCopyAtIndex(i).Number;
 
                     int numberToRemove = (newNumberOfCharacter > oldNumberOfCharacter) ? oldNumberOfCharacter : newNumberOfCharacter;
-                    fullRoster.RemoveTroop(oldTroopRoster.GetElementCopyAtIndex(i).Character, numberToRemove);
+                    newlyAddedTroops.RemoveTroop(oldTroopRoster.GetElementCopyAtIndex(i).Character, numberToRemove);
                 }
             }
 
-            return fullRoster;
+            return newlyAddedTroops;
+        }
+
+        public static float GetTroopWage(TroopRoster troopRoster)
+        {
+            float totalWage = 0;
+            //InformationManager.DisplayMessage(new InformationMessage("troopRoster Man Count: " + troopRoster.TotalManCount, Colors.Green));
+
+            for (int i = 0; i < troopRoster.Count; i++)
+                totalWage += troopRoster.GetElementCopyAtIndex(i).Character.TroopWage * troopRoster.GetElementCopyAtIndex(i).Number;
+
+            return totalWage;
         }
 
     }

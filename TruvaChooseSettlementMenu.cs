@@ -24,6 +24,15 @@ namespace Truva
                 }
             }
 
+            //list.Sort(delegate (InquiryElement x, InquiryElement y)
+            //{
+            //    Settlement sx = (Settlement) x.Identifier;
+            //    Settlement sy = (Settlement) y.Identifier;
+            //    return sx.OwnerClan.Kingdom.Name.ToString().CompareTo(sy.OwnerClan.Kingdom.Name.ToString());
+            //});
+
+            list.Sort((a, b) => a.Title.CompareTo(b.Title));
+
             MBInformationManager.ShowMultiSelectionInquiry(new MultiSelectionInquiryData(
             new TextObject("Truva Troop Settlement", null).ToString(), string.Empty, list, true, 1, new TextObject("Choose Settlement", null).ToString(),
             new TextObject("{=3CpNUnVl}Cancel", null).ToString(), new Action<List<InquiryElement>>(OnSettlementChoosed),

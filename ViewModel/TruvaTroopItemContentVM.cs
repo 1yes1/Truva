@@ -8,6 +8,7 @@ using TaleWorlds.MountAndBlade.View;
 using TaleWorlds.ScreenSystem;
 using System.Threading.Tasks;
 using TaleWorlds.CampaignSystem.Settlements;
+using Truva.CampaignBehaviors;
 
 namespace Truva.ViewModel
 {

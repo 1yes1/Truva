@@ -8,6 +8,7 @@ using TaleWorlds.Library;
 using TaleWorlds.MountAndBlade;
 using TaleWorlds.MountAndBlade.View.MissionViews;
 using TaleWorlds.ScreenSystem;
+using Truva.MissionBehaviors;
 
 namespace Truva.MissionView
 {

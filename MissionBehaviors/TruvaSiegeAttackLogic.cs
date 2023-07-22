@@ -1,10 +1,15 @@
 ﻿using System.Collections.Generic;
+using TaleWorlds.Core;
 using TaleWorlds.Engine;
 using TaleWorlds.Library;
+using TaleWorlds.Localization;
 using TaleWorlds.MountAndBlade;
+using Truva.CampaignBehaviors;
 using Truva.MissionView;
+using Truva.ViewModel;
+using static TaleWorlds.MountAndBlade.FormationAI;
 
-namespace Truva
+namespace Truva.MissionBehaviors
 {
     public class TruvaSiegeAttackLogic : MissionLogic
     {
@@ -18,7 +23,7 @@ namespace Truva
             ToGate,
             Fallback,
         }
-        
+
         private TruvaAttackType _currentAttackType = TruvaAttackType.None;
 
         private bool _isArrivedToLadder = false;
@@ -75,7 +80,7 @@ namespace Truva
 
             //InputManager.OnAttackKeysPressed -= StartAttack;
             //InputManager.OnAttackKeysPressed += StartAttack;
-            
+
             TruvaSiegeLogic.OnTruvaTroopsSpawnedEvent += OnTruvaTroopsSpawned;
             _truvaSiegeMissionView.OnAttackTypeSelectedEvent += StartAttack;
 
@@ -113,12 +118,10 @@ namespace Truva
                 {
                     DisableAgentTargets();
                 }
-
             }
-
         }
 
-        private void OnTruvaTroopsSpawned(List<Agent> agents,Formation formation)
+        private void OnTruvaTroopsSpawned(List<Agent> agents, Formation formation)
         {
             _agents = agents;
 
@@ -160,7 +163,6 @@ namespace Truva
                 AttackToGate();
             else if (attackType == TruvaAttackType.Fallback)
                 Fallback();
-
         }
 
         private void AttackToSiegeWeapons()
@@ -176,14 +178,18 @@ namespace Truva
                 {
                     _agents[i].SetScriptedTargetEntityAndPosition(_targetSiegeWeapon.GameEntity, worldPosition, Agent.AISpecialCombatModeFlags.AttackEntity);
                 }
-                InformationManager.DisplayMessage(new InformationMessage("Attack To The Siege Weapons!!", Colors.Red));
+
+                TextObject message = new TextObject("Truva Troops is attacking to the Siege Weapons!", null);
+
+                InformationManager.DisplayMessage(new InformationMessage(message.ToString(), Colors.Red));
+                MBInformationManager.AddQuickInformation(message, 0, TruvaMissionHelper.TruvaTroop.TroopLeader.CharacterObject, "");
             }
             else
                 StartAttack(TruvaAttackType.Charge);
         }
 
         private void AttackToLadders(FormationAI.BehaviorSide behaviorSide)
-        {   
+        {
             TruvaMissionHelper.GetTargetSiegeLadder(_siegeLadders, behaviorSide, out _targetSiegeLadder);
 
             if (_targetSiegeLadder != null)
@@ -201,7 +207,10 @@ namespace Truva
                 for (int i = 0; i < _agents.Count; i++)
                     _agents[i].SetScriptedPosition(ref worldPosition, false, Agent.AIScriptedFrameFlags.GoToPosition);
 
-                InformationManager.DisplayMessage(new InformationMessage("Attack To The " + behaviorSide.ToString() + " Wall", Colors.Red));
+                TextObject message = new TextObject("Truva Troops is attacking to the " + behaviorSide.ToString() + " Wall!", null);
+
+                InformationManager.DisplayMessage(new InformationMessage(message.ToString(), Colors.Red));
+                MBInformationManager.AddQuickInformation(message, 0, TruvaMissionHelper.TruvaTroop.TroopLeader.CharacterObject, "");
 
             }
             else
@@ -212,8 +221,6 @@ namespace Truva
         {
             if (_targetCastleGate != null)
             {
-                InformationManager.DisplayMessage(new InformationMessage("Attack To The Gate!!", Colors.Red));
-
                 //Eğer zaten saldırıyorsa herhangi bir yere duvar üstündeki bugları önlemek için önce geri çekicez sonra saldırtcaz
                 if (_currentAttackType != TruvaAttackType.None)
                 {
@@ -228,6 +235,11 @@ namespace Truva
 
                 for (int i = 0; i < _agents.Count; i++)
                     _agents[i].SetScriptedTargetEntityAndPosition(_targetCastleGate.GameEntity, worldPosition, Agent.AISpecialCombatModeFlags.SurroundAttackEntity);
+
+                TextObject message = new TextObject("Truva Troops is attacking to the Gate!", null);
+
+                InformationManager.DisplayMessage(new InformationMessage(message.ToString(), Colors.Red));
+                MBInformationManager.AddQuickInformation(message, 0, TruvaMissionHelper.TruvaTroop.TroopLeader.CharacterObject, "");
             }
             else
                 StartAttack(TruvaAttackType.Charge);
@@ -238,6 +250,11 @@ namespace Truva
             InformationManager.DisplayMessage(new InformationMessage("Charge!!", Colors.Red));
             _truvaFormation.SetMovementOrder(MovementOrder.MovementOrderCharge);
             _currentAttackType = TruvaAttackType.Charge;
+
+            TextObject message = new TextObject("Truva Troops is Charging!", null);
+
+            InformationManager.DisplayMessage(new InformationMessage(message.ToString(), Colors.Red));
+            MBInformationManager.AddQuickInformation(message, 0, TruvaMissionHelper.TruvaTroop.TroopLeader.CharacterObject, "");
         }
 
         private void Fallback(TruvaAttackType fallbackingFor = TruvaAttackType.None)
@@ -247,11 +264,18 @@ namespace Truva
             {
                 _agents[i].SetScriptedPosition(ref worldPosition, false, Agent.AIScriptedFrameFlags.GoToPosition);
             }
-            InformationManager.DisplayMessage(new InformationMessage("Retreat!!", Colors.Red));
+
             _isRetreating = true;
 
             if (_fallbackingFor != TruvaAttackType.None)
                 InformationManager.DisplayMessage(new InformationMessage("Retreating For " + _fallbackingFor.ToString(), Colors.Red));
+            else
+            {
+                TextObject message = new TextObject("Truva Troops is Falling Back!", null);
+
+                InformationManager.DisplayMessage(new InformationMessage(message.ToString(), Colors.Red));
+                MBInformationManager.AddQuickInformation(message, 0, TruvaMissionHelper.TruvaTroop.TroopLeader.CharacterObject, "");
+            }
 
             _fallbackingFor = fallbackingFor;
         }
@@ -274,11 +298,6 @@ namespace Truva
                 StartAttack(TruvaAttackType.Charge);
             }
         }
-
-
-
-
-
 
     }
 }

@@ -2,16 +2,21 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using TaleWorlds.CampaignSystem;
+using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.Engine;
 using TaleWorlds.Library;
 using TaleWorlds.MountAndBlade;
+using Truva.CampaignBehaviors;
 using static TaleWorlds.MountAndBlade.DestructableComponent;
 using static TaleWorlds.MountAndBlade.FormationAI;
 
-namespace Truva
+namespace Truva.MissionBehaviors
 {
     public class TruvaMissionHelper
     {
+        public static TruvaTroop TruvaTroop { get => TruvaHelper.FindTruvaTroop(Settlement.CurrentSettlement.StringId); }
+
         public static List<SiegeWeapon> GetSiegeWeapons()
         {
             List<MissionObject> missionObjects = Mission.Current.ActiveMissionObjects;
@@ -102,7 +107,7 @@ namespace Truva
         }
 
 
-        public static void GetTargetSiegeLadder(IEnumerable<SiegeLadder> siegeLadders, FormationAI.BehaviorSide behaviorSide, out SiegeLadder targetSiegeLadder)
+        public static void GetTargetSiegeLadder(IEnumerable<SiegeLadder> siegeLadders, BehaviorSide behaviorSide, out SiegeLadder targetSiegeLadder)
         {
             if (siegeLadders.Count() == 0)
             {
