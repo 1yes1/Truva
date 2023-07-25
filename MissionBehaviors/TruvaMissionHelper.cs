@@ -4,9 +4,12 @@ using System.Linq;
 using System.Text;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.Settlements;
+using TaleWorlds.CampaignSystem.Siege;
+using TaleWorlds.Core;
 using TaleWorlds.Engine;
 using TaleWorlds.Library;
 using TaleWorlds.MountAndBlade;
+using TaleWorlds.MountAndBlade.Objects.Siege;
 using Truva.CampaignBehaviors;
 using static TaleWorlds.MountAndBlade.DestructableComponent;
 using static TaleWorlds.MountAndBlade.FormationAI;
@@ -29,34 +32,64 @@ namespace Truva.MissionBehaviors
                 {
                     SiegeWeapon siegeWeapon = (SiegeWeapon)missionObjects[i];
 
-                    siegeWeaponsList.Add(siegeWeapon);
-
-                    //InformationManager.DisplayMessage(new InformationMessage("Siege Machine Found: " + siegeWeapon.GameEntity.Name, Colors.Red));
+                    if(siegeWeapon.GetSide() == TaleWorlds.Core.BattleSideEnum.Defender)
+                         siegeWeaponsList.Add(siegeWeapon);
                 }
             }
 
             return siegeWeaponsList;
         }
 
-        public static List<SiegeLadder> GetSiegeLadders()
+
+        public static Tuple<WorldPosition,WorldPosition> GetWallPositions()
         {
             List<MissionObject> missionObjects = Mission.Current.ActiveMissionObjects;
+            WorldPosition posRight = WorldPosition.Invalid;
+            WorldPosition posLeft = WorldPosition.Invalid;
+            WorldPosition posMiddle = WorldPosition.Invalid;
 
-            List<SiegeLadder> siegeLaddersList = new List<SiegeLadder>();
-
-            for (int i = 0; i < missionObjects.Count; i++)
+            foreach (MissionObject missionObject in missionObjects)
             {
-                if (missionObjects[i] is SiegeLadder)
+                if(missionObject is SiegeLadder)
                 {
-                    SiegeLadder siegeLadder = (SiegeLadder)missionObjects[i];
+                    SiegeLadder siegeLadder = (SiegeLadder)missionObject;
+                    if(siegeLadder.WeaponSide == BehaviorSide.Right)
+                        posRight = siegeLadder.GetTargetStandingPointOfAIAgent(null).GetUserFrameForAgent(null).Origin;
+                    else if(siegeLadder.WeaponSide == BehaviorSide.Left)
+                        posLeft = siegeLadder.GetTargetStandingPointOfAIAgent(null).GetUserFrameForAgent(null).Origin;
+                    else if(siegeLadder.WeaponSide == BehaviorSide.Middle || siegeLadder.WeaponSide == BehaviorSide.BehaviorSideNotSet)
+                    {
+                        posMiddle = siegeLadder.GetTargetStandingPointOfAIAgent(null).GetUserFrameForAgent(null).Origin;
+                    }
 
-                    siegeLaddersList.Add(siegeLadder);
+                }
+                else if (missionObject is SiegeTower)
+                {
+                    SiegeTower siegeTower = (SiegeTower)missionObject;
+                    if (siegeTower.WeaponSide == BehaviorSide.Right)
+                        posRight = siegeTower.MovementComponent.GetTargetFrame().origin.ToWorldPosition();
+                    else if (siegeTower.WeaponSide == BehaviorSide.Left)
+                        posLeft = siegeTower.MovementComponent.GetTargetFrame().origin.ToWorldPosition();
+                    else if (siegeTower.WeaponSide == BehaviorSide.Middle || siegeTower.WeaponSide == BehaviorSide.BehaviorSideNotSet)
+                    {
+                        posMiddle = siegeTower.MovementComponent.GetTargetFrame().origin.ToWorldPosition();
+                    }
 
-                    //InformationManager.DisplayMessage(new InformationMessage("Siege Ladder Found: " + siegeLadder.GameEntity.Name, Colors.Yellow));
                 }
             }
 
-            return siegeLaddersList;
+            if (!posLeft.IsValid)
+                posLeft = posMiddle;
+            else if(!posRight.IsValid)
+                posRight = posMiddle;
+
+            Tuple<WorldPosition, WorldPosition> wallPositions = new Tuple<WorldPosition, WorldPosition>(posLeft, posRight);
+
+            //InformationManager.DisplayMessage(new InformationMessage("Item1: " + wallPositions.Item1, Colors.Red));
+            //InformationManager.DisplayMessage(new InformationMessage("Item2: " + wallPositions.Item2, Colors.Red));
+
+
+            return wallPositions;
         }
 
 
@@ -71,61 +104,63 @@ namespace Truva.MissionBehaviors
                 if (missionObjects[i] is CastleGate)
                 {
                     castleGatesList.Add((CastleGate)missionObjects[i]);
-
-                    //InformationManager.DisplayMessage(new InformationMessage("Castle Gate Found !!: " + missionObjects[i].GameEntity.Name, Colors.Blue));
                 }
             }
             return castleGatesList;
         }
 
 
-
-        public static void GetTargetSiegeWeapon(IEnumerable<SiegeWeapon> siegeWeapons, OnHitTakenAndDestroyedDelegate onHitTakenAndDestroyedDelegate, out SiegeWeapon targetSiegeWeapon)
+        public static void GetTargetSiegeWeapon(IEnumerable<SiegeWeapon> siegeWeapons, Vec3 formationPos, OnHitTakenAndDestroyedDelegate onHitTakenAndDestroyedDelegate, out SiegeWeapon targetSiegeWeapon)
         {
+            targetSiegeWeapon = null;
+
             if (siegeWeapons.Count() == 0)
-            {
-                targetSiegeWeapon = null;
                 return;
-            }
+
             IEnumerator<SiegeWeapon> enumerator = siegeWeapons.GetEnumerator();
+
+            float minDistance = float.MaxValue;
+            SiegeWeapon tempWeapon = null;
 
             while (enumerator.MoveNext())
             {
-                targetSiegeWeapon = enumerator.Current;
+                tempWeapon = enumerator.Current;
 
-                if (targetSiegeWeapon.DestructionComponent == null)
+                if (tempWeapon.DestructionComponent == null)
                     continue;
 
-                if (!targetSiegeWeapon.DestructionComponent.IsDestroyed)
+                if (!tempWeapon.DestructionComponent.IsDestroyed && tempWeapon.GameEntity.GlobalPosition.Distance(formationPos) < minDistance)
                 {
-                    targetSiegeWeapon.DestructionComponent.OnDestroyed -= onHitTakenAndDestroyedDelegate;
-                    targetSiegeWeapon.DestructionComponent.OnDestroyed += onHitTakenAndDestroyedDelegate;
-                    return;
+                    minDistance = tempWeapon.GameEntity.GlobalPosition.Distance(formationPos);
+                    targetSiegeWeapon = tempWeapon;
                 }
             }
-            targetSiegeWeapon = null;
+
+            if (minDistance != float.MaxValue)
+            {
+                targetSiegeWeapon.DestructionComponent.OnDestroyed -= onHitTakenAndDestroyedDelegate;
+                targetSiegeWeapon.DestructionComponent.OnDestroyed += onHitTakenAndDestroyedDelegate;
+            }
+            else
+                targetSiegeWeapon = null;
         }
 
 
-        public static void GetTargetSiegeLadder(IEnumerable<SiegeLadder> siegeLadders, BehaviorSide behaviorSide, out SiegeLadder targetSiegeLadder)
+        public static void GetTargetWallPositions(Tuple<WorldPosition, WorldPosition> siegeLadders, BehaviorSide behaviorSide, out WorldPosition targetWallPosition)
         {
-            if (siegeLadders.Count() == 0)
+            if (behaviorSide == BehaviorSide.Right)
             {
-                targetSiegeLadder = null;
+                targetWallPosition = siegeLadders.Item2;
                 return;
             }
-
-            IEnumerator<SiegeLadder> enumerator = siegeLadders.GetEnumerator();
-
-            while (enumerator.MoveNext())
+            else if(behaviorSide == BehaviorSide.Left)
             {
-                if (behaviorSide == enumerator.Current.WeaponSide)
-                {
-                    targetSiegeLadder = enumerator.Current;
-                    return;
-                }
+                targetWallPosition = siegeLadders.Item1;
+                return;
             }
-            targetSiegeLadder = null;
+            else
+                targetWallPosition = WorldPosition.Invalid;
+
         }
 
 
@@ -149,8 +184,6 @@ namespace Truva.MissionBehaviors
                 if (!tempCastleGate.DestructionComponent.IsDestroyed && tempCastleGate.GetPosition().Distance(agentToDistance.Position) < minDistance)
                 {
                     minDistance = tempCastleGate.GetPosition().Distance(agentToDistance.Position);
-                    //InformationManager.DisplayMessage(new InformationMessage("Castle : "+tempCastleGate.GameEntity.Name+ " :" + minDistance, Colors.Blue));
-                    //InformationManager.DisplayMessage(new InformationMessage("Castle : " + tempCastleGate.GameEntity.Name + " :" + tempCastleGate.MiddlePosition.TacticalRegionMembership.ToString(), Colors.Blue));
                     castleGate = tempCastleGate;
                 }
             }
@@ -162,8 +195,6 @@ namespace Truva.MissionBehaviors
             }
             else
                 castleGate = null;
-
-
 
         }
 

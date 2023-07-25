@@ -1,5 +1,7 @@
 ﻿using Bannerlord.ButterLib.ObjectSystem.Extensions;
+using HarmonyLib;
 using SandBox.BoardGames;
+using SandBox.Missions.MissionLogics;
 using SandBox.View.Map;
 using System;
 using System.Collections.Generic;
@@ -9,11 +11,13 @@ using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Roster;
 using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.Core;
+using TaleWorlds.Diamond;
 using TaleWorlds.Engine;
 using TaleWorlds.Engine.GauntletUI;
 using TaleWorlds.GauntletUI;
 using TaleWorlds.GauntletUI.Data;
 using TaleWorlds.Library;
+using TaleWorlds.Localization;
 using TaleWorlds.MountAndBlade;
 using TaleWorlds.MountAndBlade.View;
 using TaleWorlds.MountAndBlade.View.MissionViews;
@@ -32,12 +36,14 @@ namespace Truva.MissionBehaviors
         private bool _isDeploymentFinished = false;
 
         private int _deadCount = 0;
-        private int _woundedCount = 0;
 
+        private int _woundedCount = 0;
 
         private List<Agent> _agents = new List<Agent>();
 
         private Formation _truvaFormation;
+
+        private WorldPosition _spawnPosition;
 
         public bool IsTruvaTroopSpawned { get; private set; }
 
@@ -51,13 +57,19 @@ namespace Truva.MissionBehaviors
 
         public MatrixFrame TruvaSpawnFrame { get; private set; }
 
-        public bool HasTruvaTroop { get => (Settlement.CurrentSettlement != null && TruvaHelper.FindTruvaTroop(Settlement.CurrentSettlement.StringId) != null); }
+        public bool IsBattleResultReady { get; private set; }
+
+        public bool IsTruvaDestroyed { get => _deadCount + _woundedCount >= _agents.Count - 1; }
+
+        public bool HasTruvaTroop { get => (Mission.Current.IsSiegeBattle && Settlement.CurrentSettlement != null && TruvaHelper.FindTruvaTroop(Settlement.CurrentSettlement.StringId) != null); }
 
         public override void AfterStart()
         {
-            base.AfterStart();
+            if (!HasTruvaTroop)
+                return;
 
-            InformationManager.DisplayMessage(new InformationMessage("Siege Started", Colors.Red));
+            InformationManager.DisplayMessage(new InformationMessage("You have Truva Troop inside the settlement!", Colors.Yellow));
+            InformationManager.DisplayMessage(new InformationMessage("You can call them with holding 'Q' and sliding mouse up!", Colors.Yellow));
 
             InputManager = Mission.GetMissionBehavior<TruvaInputManager>();
 
@@ -68,20 +80,20 @@ namespace Truva.MissionBehaviors
 
         public override void OnDeploymentFinished()
         {
-            base.OnDeploymentFinished();
-
             if (!HasTruvaTroop)
                 return;
 
-            InputManager.OnKeyCtrlAPressed += SpawnTruvaTroops;
             TruvaSiegeMV.OnTruvaSpawnChooseEvent += OnTruvaSpawnChoose;
+
+            TruvaTroop = TruvaHelper.FindTruvaTroop(Settlement.CurrentSettlement.StringId);
 
             _isDeploymentFinished = true;
         }
 
+
         public override void OnRetreatMission()
         {
-            if (!HasTruvaTroop)
+            if (!HasTruvaTroop || !IsTruvaTroopSpawned)
                 return;
 
             CalculateWoundAndDead();
@@ -89,14 +101,29 @@ namespace Truva.MissionBehaviors
 
         public override void OnMissionResultReady(MissionResult missionResult)
         {
-            if (!HasTruvaTroop)
+            if (!HasTruvaTroop || !IsTruvaTroopSpawned)
                 return;
 
+            if(missionResult.PlayerDefeated)
+            {
+                ShowMissionMessage("Truva Troop is retreating!");
+
+                for (int i = 0; i < _agents.Count; i++)
+                {
+                    _agents[i].Retreat(_spawnPosition);
+                }
+            }
+
+            IsBattleResultReady = true;
+            //InformationManager.DisplayMessage(new InformationMessage("battle result", Colors.Yellow));
             CalculateWoundAndDead();
         }
 
         public override void OnAgentRemoved(Agent affectedAgent, Agent affectorAgent, AgentState agentState, KillingBlow blow)
         {
+            if (!HasTruvaTroop || !IsTruvaTroopSpawned)
+                return;
+
             if (_agents.Contains(affectedAgent) && !affectedAgent.IsHero)
             {
                 if (agentState == AgentState.Killed)
@@ -108,13 +135,12 @@ namespace Truva.MissionBehaviors
 
         private void CalculateWoundAndDead()
         {
-            InformationManager.DisplayMessage(new InformationMessage("------------------Calculate-------------", Colors.Yellow));
-
-            InformationManager.DisplayMessage(new InformationMessage("_deadCount: " + _deadCount, Colors.Magenta));
-            InformationManager.DisplayMessage(new InformationMessage("_woundedCount: " + _woundedCount, Colors.Magenta));
-
-            TruvaTroop.TroopRoster.KillNumberOfMenRandomly(_deadCount, false);
-            TruvaTroop.TroopRoster.WoundNumberOfTroopsRandomly(_woundedCount);
+            if (IsTruvaTroopSpawned)
+            {
+                //InformationManager.DisplayMessage(new InformationMessage("------------------Calculate-------------", Colors.Yellow));
+                TruvaTroop.TroopRoster.KillNumberOfMenRandomly(_deadCount, false);
+                TruvaTroop.TroopRoster.WoundNumberOfTroopsRandomly(_woundedCount);
+            }
         }
 
         public override void OnMissionStateFinalized()
@@ -122,7 +148,8 @@ namespace Truva.MissionBehaviors
             if (!HasTruvaTroop)
                 return;
 
-            InformationManager.DisplayMessage(new InformationMessage("Siege Finished- Troops Added To Main", Colors.Red));
+            ShowMissionMessage(TruvaTroop.SettlementName + " Truva Troop added to your party!");
+
             PartyBase.MainParty.MemberRoster.Add(TruvaTroop.TroopRoster);
             Campaign.Current.GetCampaignBehavior<TruvaCampaignBehavior>().RemoveTruvaTroop(TruvaTroop, true);
         }
@@ -138,16 +165,15 @@ namespace Truva.MissionBehaviors
             if (!_isDeploymentFinished)
                 return;
 
-            InformationManager.DisplayMessage(new InformationMessage("Truva Troop! Attack!", Colors.Red));
-
-            TruvaTroop = TruvaHelper.FindTruvaTroop(Settlement.CurrentSettlement.StringId);
             TruvaTroop.IsAtWar = true;
 
             SpawnAgents(TruvaTroop.TroopRoster);
 
+            //Mission.Current.GetMissionBehavior<MissionAgentSpawnLogic>()
+
             IsTruvaTroopSpawned = true;
 
-            //Burda almamız lazım ki en yakın kapıyı alabilelim
+            ShowMissionMessage("Truva Troop came to help!");
 
             OnTruvaTroopsSpawnedEvent?.Invoke(_agents, _truvaFormation);
         }
@@ -157,14 +183,13 @@ namespace Truva.MissionBehaviors
             if (IsTruvaTroopSpawned)
                 return;
 
-            Team team = Mission.AttackerTeam;
+            Team team = Mission.Current.PlayerTeam;
             MatrixFrame frame = new MatrixFrame();
-            WorldPosition spawnPosition;
             Vec2 spawnDirection;
 
-            Mission.GetFormationSpawnFrame(BattleSideEnum.Defender, FormationClass.HeavyInfantry, true, out spawnPosition, out spawnDirection);
+            Mission.Current.GetFormationSpawnFrame(BattleSideEnum.Defender, FormationClass.HeavyInfantry, true, out _spawnPosition, out spawnDirection);
 
-            frame.origin = spawnPosition.GetGroundVec3();
+            frame.origin = _spawnPosition.GetGroundVec3();
             frame.rotation = Mat3.CreateMat3WithForward(new Vec3(spawnDirection));
 
             TruvaSpawnFrame = frame;
@@ -188,6 +213,10 @@ namespace Truva.MissionBehaviors
 
                     data.InitialPosition(in frame.origin).Team(team).InitialDirection(in direction).Controller(Agent.ControllerType.AI).Formation(_truvaFormation);
                     Agent agent = Mission.Current.SpawnAgent(data);
+
+                    Mission.Current.PlayerTeam.RemoveAgentFromTeam(agent);
+                    //Mission.PlayerTeam.AddAgentToTeam(agent);
+
                     agent.SetWatchState(Agent.WatchState.Alarmed);
 
                     if (agent.Character == TruvaTroop.TroopLeader.CharacterObject)
@@ -200,6 +229,14 @@ namespace Truva.MissionBehaviors
 
             _truvaFormation.SetControlledByAI(true);
         }
+
+        public void ShowMissionMessage(string text)
+        {
+            TextObject message = new TextObject(text, null);
+            InformationManager.DisplayMessage(new InformationMessage(message.ToString(),Colors.Yellow));
+            MBInformationManager.AddQuickInformation(message, 0, TruvaTroop.TroopLeader.CharacterObject, "");
+        }
+
 
     }
 }

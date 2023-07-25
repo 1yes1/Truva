@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using TaleWorlds.Core;
+using TaleWorlds.Diamond;
 using TaleWorlds.Engine;
 using TaleWorlds.Library;
 using TaleWorlds.Localization;
@@ -26,7 +28,7 @@ namespace Truva.MissionBehaviors
 
         private TruvaAttackType _currentAttackType = TruvaAttackType.None;
 
-        private bool _isArrivedToLadder = false;
+        private bool _isArrivedToWallPosition = false;
 
         private bool _isDeploymentFinished = false;
 
@@ -38,15 +40,13 @@ namespace Truva.MissionBehaviors
 
         private SiegeWeapon _targetSiegeWeapon;
 
-        private SiegeLadder _targetSiegeLadder;
-
         private Formation _truvaFormation;
 
-        private WorldPosition _targetSiegeLadderPosition;
+        private WorldPosition _targetWallPosition;
 
         private IEnumerable<SiegeWeapon> _siegeWeapons;
 
-        private IEnumerable<SiegeLadder> _siegeLadders;
+        private Tuple<WorldPosition,WorldPosition> _wallPositions;
 
         private IEnumerable<CastleGate> _castleGates;
 
@@ -58,6 +58,8 @@ namespace Truva.MissionBehaviors
 
         private TruvaSiegeLogic TruvaSiegeLogic { get; set; }
 
+        private bool IsTruvaTroopSiegeBattle { get => (Mission.Current.IsSiegeBattle || TruvaSiegeLogic != null || TruvaSiegeLogic.HasTruvaTroop); }
+
         public TruvaSiegeAttackLogic(TruvaSiegeMissionView truvaSiegeMissionView)
         {
             _truvaSiegeMissionView = truvaSiegeMissionView;
@@ -65,17 +67,20 @@ namespace Truva.MissionBehaviors
 
         public override void AfterStart()
         {
+
             TruvaSiegeLogic = Mission.GetMissionBehavior<TruvaSiegeLogic>();
 
             InputManager = Mission.GetMissionBehavior<TruvaInputManager>();
-
         }
 
         public override void OnDeploymentFinished()
         {
+            if (!IsTruvaTroopSiegeBattle)
+                return;
+
             _isDeploymentFinished = true;
             _siegeWeapons = TruvaMissionHelper.GetSiegeWeapons();
-            _siegeLadders = TruvaMissionHelper.GetSiegeLadders();
+            _wallPositions = TruvaMissionHelper.GetWallPositions();
             _castleGates = TruvaMissionHelper.GetCastleGates();
 
             //InputManager.OnAttackKeysPressed -= StartAttack;
@@ -88,16 +93,17 @@ namespace Truva.MissionBehaviors
 
         public override void OnMissionTick(float dt)
         {
-            if (!Mission.Current.IsSiegeBattle || TruvaSiegeLogic == null)
+            if (!IsTruvaTroopSiegeBattle || !TruvaSiegeLogic.IsTruvaTroopSpawned)
                 return;
-
-            if (!_isArrivedToLadder && TruvaSiegeLogic.IsTruvaTroopSpawned && _isDeploymentFinished && _targetSiegeLadder != null)
+            
+            if (!_isArrivedToWallPosition && _isDeploymentFinished && _targetWallPosition.IsValid)
             {
-                float distanceToLadder = _targetSiegeLadderPosition.AsVec2.Distance(_truvaFormation.GetAveragePositionOfUnits(true, true));
-                if (distanceToLadder < 20)
+                Vec3 upVec = _targetWallPosition.GetGroundVec3();
+                upVec.z = 10;
+                float distanceToWall = upVec.Distance(_truvaFormation.GetAveragePositionOfUnits(true, true).ToVec3());
+                if (distanceToWall < 23)
                 {
-                    _isArrivedToLadder = true;
-                    //InformationManager.DisplayMessage(new InformationMessage("Arrived To Ladders !!! ", Colors.Magenta));
+                    _isArrivedToWallPosition = true;
                     StartAttack(TruvaAttackType.Charge);
                 }
             }
@@ -116,7 +122,7 @@ namespace Truva.MissionBehaviors
                 }
                 else if (distanceToRetreatPos < 5)
                 {
-                    DisableAgentTargets();
+                    _isRetreating = false;
                 }
             }
         }
@@ -132,8 +138,7 @@ namespace Truva.MissionBehaviors
 
         private void DisableAgentTargets()
         {
-            //_targetCastleGate = null;
-            _targetSiegeLadder = null;
+            _targetWallPosition = WorldPosition.Invalid;
             _targetSiegeWeapon = null;
             for (int i = 0; i < _agents.Count; i++)
             {
@@ -146,8 +151,14 @@ namespace Truva.MissionBehaviors
 
         public void StartAttack(TruvaAttackType attackType)
         {
-            if (!TruvaSiegeLogic.IsTruvaTroopSpawned)
+            if (!TruvaSiegeLogic.IsTruvaTroopSpawned || TruvaSiegeLogic.IsBattleResultReady)
                 return;
+
+            if (TruvaSiegeLogic.IsTruvaDestroyed)
+            {
+                TruvaSiegeLogic.ShowMissionMessage("Truva Troop Destroyed!");
+                return;
+            }
 
             DisableAgentTargets();
 
@@ -156,9 +167,9 @@ namespace Truva.MissionBehaviors
             else if (attackType == TruvaAttackType.ToSiegeWeapons)
                 AttackToSiegeWeapons();
             else if (attackType == TruvaAttackType.ToRightWalls)
-                AttackToLadders(FormationAI.BehaviorSide.Right);
+                AttackToWalls(FormationAI.BehaviorSide.Right);
             else if (attackType == TruvaAttackType.ToLeftWalls)
-                AttackToLadders(FormationAI.BehaviorSide.Left);
+                AttackToWalls(FormationAI.BehaviorSide.Left);
             else if (attackType == TruvaAttackType.ToGate)
                 AttackToGate();
             else if (attackType == TruvaAttackType.Fallback)
@@ -167,7 +178,7 @@ namespace Truva.MissionBehaviors
 
         private void AttackToSiegeWeapons()
         {
-            TruvaMissionHelper.GetTargetSiegeWeapon(_siegeWeapons, OnSiegeMachineDestroyed, out _targetSiegeWeapon);
+            TruvaMissionHelper.GetTargetSiegeWeapon(_siegeWeapons, _truvaFormation.GetAveragePositionOfUnits(true, true).ToVec3(), OnSiegeMachineDestroyed, out _targetSiegeWeapon);
 
             if (_targetSiegeWeapon != null)
             {
@@ -179,42 +190,36 @@ namespace Truva.MissionBehaviors
                     _agents[i].SetScriptedTargetEntityAndPosition(_targetSiegeWeapon.GameEntity, worldPosition, Agent.AISpecialCombatModeFlags.AttackEntity);
                 }
 
-                TextObject message = new TextObject("Truva Troops is attacking to the Siege Weapons!", null);
-
-                InformationManager.DisplayMessage(new InformationMessage(message.ToString(), Colors.Red));
-                MBInformationManager.AddQuickInformation(message, 0, TruvaMissionHelper.TruvaTroop.TroopLeader.CharacterObject, "");
+                TruvaSiegeLogic.ShowMissionMessage("Truva Troop is attacking to the Siege Weapons!");
             }
             else
                 StartAttack(TruvaAttackType.Charge);
         }
 
-        private void AttackToLadders(FormationAI.BehaviorSide behaviorSide)
+        private void AttackToWalls(FormationAI.BehaviorSide behaviorSide)
         {
-            TruvaMissionHelper.GetTargetSiegeLadder(_siegeLadders, behaviorSide, out _targetSiegeLadder);
+            TruvaMissionHelper.GetTargetWallPositions(_wallPositions, behaviorSide, out _targetWallPosition);
 
-            if (_targetSiegeLadder != null)
+            if (_targetWallPosition.IsValid)
             {
                 if (behaviorSide == FormationAI.BehaviorSide.Left)
                     _currentAttackType = TruvaAttackType.ToLeftWalls;
                 else
                     _currentAttackType = TruvaAttackType.ToRightWalls;
 
-                WorldFrame worldFrame = _targetSiegeLadder.GetTargetStandingPointOfAIAgent(null).GetUserFrameForAgent(null);
+                WorldPosition worldPosition = _targetWallPosition;
 
-                WorldPosition worldPosition = worldFrame.Origin;
-                _targetSiegeLadderPosition = worldPosition;
+                _isArrivedToWallPosition = false;
 
                 for (int i = 0; i < _agents.Count; i++)
                     _agents[i].SetScriptedPosition(ref worldPosition, false, Agent.AIScriptedFrameFlags.GoToPosition);
 
-                TextObject message = new TextObject("Truva Troops is attacking to the " + behaviorSide.ToString() + " Wall!", null);
-
-                InformationManager.DisplayMessage(new InformationMessage(message.ToString(), Colors.Red));
-                MBInformationManager.AddQuickInformation(message, 0, TruvaMissionHelper.TruvaTroop.TroopLeader.CharacterObject, "");
-
+                TruvaSiegeLogic.ShowMissionMessage("Truva Troop is attacking to the " + behaviorSide.ToString() + " Wall!");
             }
             else
+            {
                 StartAttack(TruvaAttackType.Charge);
+            }
         }
 
         private void AttackToGate()
@@ -236,10 +241,7 @@ namespace Truva.MissionBehaviors
                 for (int i = 0; i < _agents.Count; i++)
                     _agents[i].SetScriptedTargetEntityAndPosition(_targetCastleGate.GameEntity, worldPosition, Agent.AISpecialCombatModeFlags.SurroundAttackEntity);
 
-                TextObject message = new TextObject("Truva Troops is attacking to the Gate!", null);
-
-                InformationManager.DisplayMessage(new InformationMessage(message.ToString(), Colors.Red));
-                MBInformationManager.AddQuickInformation(message, 0, TruvaMissionHelper.TruvaTroop.TroopLeader.CharacterObject, "");
+                TruvaSiegeLogic.ShowMissionMessage("Truva Troop is attacking to the Gate!");
             }
             else
                 StartAttack(TruvaAttackType.Charge);
@@ -247,14 +249,10 @@ namespace Truva.MissionBehaviors
 
         private void Charge()
         {
-            InformationManager.DisplayMessage(new InformationMessage("Charge!!", Colors.Red));
             _truvaFormation.SetMovementOrder(MovementOrder.MovementOrderCharge);
             _currentAttackType = TruvaAttackType.Charge;
 
-            TextObject message = new TextObject("Truva Troops is Charging!", null);
-
-            InformationManager.DisplayMessage(new InformationMessage(message.ToString(), Colors.Red));
-            MBInformationManager.AddQuickInformation(message, 0, TruvaMissionHelper.TruvaTroop.TroopLeader.CharacterObject, "");
+            TruvaSiegeLogic.ShowMissionMessage("Truva Troop is Charging!");
         }
 
         private void Fallback(TruvaAttackType fallbackingFor = TruvaAttackType.None)
@@ -267,15 +265,8 @@ namespace Truva.MissionBehaviors
 
             _isRetreating = true;
 
-            if (_fallbackingFor != TruvaAttackType.None)
-                InformationManager.DisplayMessage(new InformationMessage("Retreating For " + _fallbackingFor.ToString(), Colors.Red));
-            else
-            {
-                TextObject message = new TextObject("Truva Troops is Falling Back!", null);
-
-                InformationManager.DisplayMessage(new InformationMessage(message.ToString(), Colors.Red));
-                MBInformationManager.AddQuickInformation(message, 0, TruvaMissionHelper.TruvaTroop.TroopLeader.CharacterObject, "");
-            }
+            if (_fallbackingFor == TruvaAttackType.None)
+                TruvaSiegeLogic.ShowMissionMessage("Truva Troops is Falling Back!");
 
             _fallbackingFor = fallbackingFor;
         }

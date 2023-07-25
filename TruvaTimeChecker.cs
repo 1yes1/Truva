@@ -36,9 +36,8 @@ namespace Truva
         {
             if (_targetCampaignTime <= CampaignTime.Now)
             {
-
                 Campaign.Current.GetCampaignBehavior<TruvaCampaignBehavior>().RemoveFromTimeCheckers(this);
-                InformationManager.DisplayMessage(new InformationMessage("------------------------- Time Is Upp --------------------------", Colors.Magenta));
+                //InformationManager.DisplayMessage(new InformationMessage("------------------------- Time Is Upp --------------------------", Colors.Magenta));
                 OnTimeIsUpEvent?.Invoke(_truvaTroop, _troopRoster);
                 _truvaTroop.OnTimeIsUp();
             }

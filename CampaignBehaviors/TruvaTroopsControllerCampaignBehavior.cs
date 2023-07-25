@@ -47,7 +47,7 @@ namespace Truva.CampaignBehaviors
             {
                 if (!capturerParty.MapFaction.IsAtWarWith(MobileParty.MainParty.MapFaction))
                 {
-                    Campaign.Current.GetCampaignBehavior<TruvaCampaignBehavior>().RemoveTruvaTroop(truvaTroop);
+                    Campaign.Current.GetCampaignBehavior<TruvaCampaignBehavior>().RemoveTruvaTroop(truvaTroop,true);
                 }
             }
         }
@@ -56,9 +56,6 @@ namespace Truva.CampaignBehaviors
         private void OnTownRebelliousStateChanged(Town town, bool isRebellious)
         {
             TruvaTroop truvaTroop = TruvaHelper.FindTruvaTroop(town.StringId);
-            //InformationManager.DisplayMessage(new InformationMessage("Rebellious : " + town.InRebelliousState, Colors.Magenta));
-            //InformationManager.DisplayMessage(new InformationMessage("town.OwnerClan : " + town.OwnerClan.Name, Colors.Magenta));
-
             if (truvaTroop != null && town.InRebelliousState && !town.OwnerClan.MapFaction.IsAtWarWith(MobileParty.MainParty.MapFaction))
             {
                 Campaign.Current.GetCampaignBehavior<TruvaCampaignBehavior>().RemoveTruvaTroop(truvaTroop);

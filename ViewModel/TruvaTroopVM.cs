@@ -9,6 +9,7 @@ using TaleWorlds.Localization;
 using TaleWorlds.MountAndBlade;
 using TaleWorlds.ScreenSystem;
 using Truva.CampaignBehaviors;
+using Truva.Menus;
 
 namespace Truva.ViewModel
 {

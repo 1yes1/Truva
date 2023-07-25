@@ -98,8 +98,8 @@ namespace Truva.MissionView
 
         public void ToggleLayer(bool _isPressing)
         {
-            //if (Agent.Main == null || !Agent.Main.IsActive())
-            //    return;
+            if (Agent.Main == null || !Agent.Main.IsActive() || _truvaSiegeLogic.IsBattleResultReady)
+                return;
 
             if (!_isActive)
             {

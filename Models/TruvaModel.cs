@@ -18,6 +18,5 @@ namespace Truva.Models
             int skillImpactPercentage = MathF.Abs(MathF.Ceiling((400 - Hero.MainHero.GetSkillValue(DefaultSkills.Tactics)) * 0.1f));
             return securityImpactPercentage + skillImpactPercentage;
         }
-
     }
 }

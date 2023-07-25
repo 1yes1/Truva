@@ -191,5 +191,32 @@ namespace Truva.MissionView
             }
         }
 
+        [DataSourceProperty]
+        public string Cancel { get => "Cancel"; }
+        
+        [DataSourceProperty]
+        public string CallTruvaTroop { get => "Call Truva Troop"; }
+        
+        [DataSourceProperty]
+        public string AttackToRightWall { get => "Attack To Right Wall"; }
+
+        [DataSourceProperty]
+        public string AttackToGate { get => "Attack To Gate"; }
+
+        [DataSourceProperty]
+        public string Charge { get => "Charge!"; }
+
+        [DataSourceProperty]
+        public string Fallback { get => "Fallback!"; }
+
+        [DataSourceProperty]
+        public string AttackToSiegeWeapons { get => "Attack To Siege Weapons"; }
+
+        [DataSourceProperty]
+        public string AttackToLeftWall { get => "Attack To Left Wall"; }
+
+        [DataSourceProperty]
+        public string TruvaTroopOrder { get => "Truva Troop Order"; }
+
     }
 }

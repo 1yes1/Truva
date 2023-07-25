@@ -30,7 +30,7 @@ namespace Truva
         protected override void OnSubModuleLoad()
         {
             base.OnSubModuleLoad();
-            Harmony harmony = new Harmony("truva_harmony");
+            HarmonyLib.Harmony harmony = new HarmonyLib.Harmony("truva_harmony");
             harmony.PatchAll();
 
 
@@ -52,8 +52,7 @@ namespace Truva
                 campaignStarter.AddBehavior(new TruvaTroopsControllerCampaignBehavior());
             }
 
-
-            InformationManager.DisplayMessage(new InformationMessage("REAL Truva Mod ENABLED", Colors.Green));
+            //InformationManager.DisplayMessage(new InformationMessage("Truva Mod ENABLED", Colors.Green));
         }
 
         public override void OnMissionBehaviorInitialize(TaleWorlds.MountAndBlade.Mission mission)

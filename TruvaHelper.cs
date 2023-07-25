@@ -5,7 +5,9 @@ using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Roster;
 using TaleWorlds.CampaignSystem.Settlements;
 using TaleWorlds.CampaignSystem.ViewModelCollection;
+using TaleWorlds.Core;
 using TaleWorlds.Library;
+using TaleWorlds.Localization;
 using TaleWorlds.ObjectSystem;
 using Truva.CampaignBehaviors;
 
@@ -88,8 +90,7 @@ namespace Truva
             CampaignTime total = CampaignTime.HoursFromNow(num);
 
             string timeText = CampaignUIHelper.GetPartyDistanceByTimeText(distance, 5);
-
-            //InformationManager.DisplayMessage(new InformationMessage("GetPartyDistanceByTimeText: " + CampaignUIHelper.GetPartyDistanceByTimeText(distance, truvaTroopSpeed), Colors.Green));
+            timeText = (timeText == "") ? timeText = "1 hour" : timeText;
 
             return new Tuple<CampaignTime, string, float>(total, timeText, distance);
         }
@@ -100,7 +101,6 @@ namespace Truva
             TroopRoster newlyAddedTroops = fullRoster.CloneRosterData();
             for (int i = 0; i < oldTroopRoster.Count; i++)
             {
-                //InformationManager.DisplayMessage(new InformationMessage("GetElementCopyAtIndex(" + i + ").Name : " + oldTroopRoster.GetElementCopyAtIndex(i).Character.Name + " Count: " + oldTroopRoster.GetElementCopyAtIndex(i).Number, Colors.Green));
                 if(newlyAddedTroops.Contains(oldTroopRoster.GetElementCopyAtIndex(i).Character))
                 {
                     int newNumberOfCharacter = newlyAddedTroops.GetElementCopyAtIndex(newlyAddedTroops.FindIndexOfTroop(oldTroopRoster.GetElementCopyAtIndex(i).Character)).Number;
@@ -114,15 +114,20 @@ namespace Truva
             return newlyAddedTroops;
         }
 
-        public static float GetTroopWage(TroopRoster troopRoster)
+        public static int GetTroopWage(TroopRoster troopRoster)
         {
-            float totalWage = 0;
-            //InformationManager.DisplayMessage(new InformationMessage("troopRoster Man Count: " + troopRoster.TotalManCount, Colors.Green));
-
+            int totalWage = 0;
             for (int i = 0; i < troopRoster.Count; i++)
                 totalWage += troopRoster.GetElementCopyAtIndex(i).Character.TroopWage * troopRoster.GetElementCopyAtIndex(i).Number;
 
             return totalWage;
+        }
+
+        public static void ShowTruvaCampaignMessage(string text,CharacterObject leader = null)
+        {
+            TextObject message = new TextObject(text, null);
+            InformationManager.DisplayMessage(new InformationMessage(message.ToString(), Colors.Yellow));
+            MBInformationManager.AddQuickInformation(message, 0, leader, "");
         }
 
     }

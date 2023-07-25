@@ -7,6 +7,7 @@ using TaleWorlds.CampaignSystem.GameState;
 using TaleWorlds.CampaignSystem.Party;
 using TaleWorlds.CampaignSystem.Roster;
 using TaleWorlds.CampaignSystem.Settlements;
+using TaleWorlds.CampaignSystem.ViewModelCollection;
 using TaleWorlds.Core;
 using TaleWorlds.Library;
 using TaleWorlds.Localization;
@@ -15,7 +16,7 @@ using Truva.CampaignBehaviors;
 using Truva.Models;
 using static TaleWorlds.CampaignSystem.Party.PartyScreenLogic;
 
-namespace Truva
+namespace Truva.Menus
 {
     public class TruvaTroopManageMenu
     {
@@ -39,9 +40,9 @@ namespace Truva
 
         private TruvaTroop _truvaTroop;
 
-        public TruvaTroopManageMenu(Action<CharacterObject, TroopRoster, Settlement,bool> OnTruvaTroopMenuDoneClicked, Action<string> OnTruvaTroopDestroyed, Settlement settlement)
+        public TruvaTroopManageMenu(Action<CharacterObject, TroopRoster, Settlement, bool> OnTruvaTroopMenuDoneClicked, Action<string> OnTruvaTroopDestroyed, Settlement settlement)
         {
-            TextObject textObject = new TextObject(settlement.Name.ToString()+ " Truva Troop", null);
+            TextObject textObject = new TextObject(settlement.Name.ToString() + " Truva Troop", null);
 
             OnTruvaTroopMenuDoneClickedEvent += OnTruvaTroopMenuDoneClicked;
             OnTruvaTroopCanceledOrDestroyedEvent += OnTruvaTroopDestroyed;
@@ -60,7 +61,7 @@ namespace Truva
         /*
          Zaten var olan truva troop u düzenlemek için açıyoruz.
          */
-        public TruvaTroopManageMenu(TruvaTroop truvaTroop,Action<CharacterObject,TroopRoster,Settlement, bool> OnTruvaTroopMenuDoneClicked, Action<string> OnTruvaTroopDestroyed)
+        public TruvaTroopManageMenu(TruvaTroop truvaTroop, Action<CharacterObject, TroopRoster, Settlement, bool> OnTruvaTroopMenuDoneClicked, Action<string> OnTruvaTroopDestroyed)
         {
             _truvaTroop = truvaTroop;
 
@@ -81,7 +82,7 @@ namespace Truva
             //new PartyPresentationDoneButtonDelegate(this.DoneClicked), textObject, OnTruvaTroopCanceledOrDestroyed);
 
             PartyScreenLogic partyScreenLogic = new PartyScreenLogic();
-            PartyScreenLogicInitializationData initializationData = PartyScreenLogicInitializationData.CreateBasicInitDataWithMainParty(truvaTroop.TroopRoster, TroopRoster.CreateDummyTroopRoster(), PartyScreenLogic.TransferState.Transferable, PartyScreenLogic.TransferState.NotTransferable, PartyScreenLogic.TransferState.NotTransferable, IsTroopTransferable, null, textObject, null, truvaTroop.TroopLeader, _requestedRecruitCount, 0, DoneClicked, DoneButtonCondition, OnTruvaTroopCanceledOrDestroyed, null, null, false, false, false, true, 0);
+            PartyScreenLogicInitializationData initializationData = PartyScreenLogicInitializationData.CreateBasicInitDataWithMainParty(truvaTroop.TroopRoster, TroopRoster.CreateDummyTroopRoster(), TransferState.Transferable, TransferState.NotTransferable, TransferState.NotTransferable, IsTroopTransferable, null, textObject, null, truvaTroop.TroopLeader, _requestedRecruitCount, 0, DoneClicked, DoneButtonCondition, OnTruvaTroopCanceledOrDestroyed, null, null, false, false, false, true, 0);
             partyScreenLogic.Initialize(initializationData);
             PartyState partyState = Game.Current.GameStateManager.CreateState<PartyState>();
             partyState.InitializeLogic(partyScreenLogic);
@@ -99,38 +100,41 @@ namespace Truva
                 return new Tuple<bool, TextObject>(false, textObject);
             }
 
-            if ((leftMemberRoster.TotalHeroes == 0 && (_truvaTroop != null && TruvaHelper.FindTruvaTroop(_truvaTroop.SettlementId) == null)) ||
-                (leftMemberRoster.TotalHeroes == 0 && TruvaHelper.FindTruvaTroop(_targetSettlement.StringId) == null) ||
-                (!_isManaging && leftMemberRoster.TotalManCount <= 0))
+            if (leftMemberRoster.TotalHeroes == 0 && _truvaTroop != null && TruvaHelper.FindTruvaTroop(_truvaTroop.SettlementId) == null ||
+                leftMemberRoster.TotalHeroes == 0 && TruvaHelper.FindTruvaTroop(_targetSettlement.StringId) == null ||
+                !_isManaging && leftMemberRoster.TotalManCount <= 0)
             {
                 TextObject textObject = new TextObject("You need to choose a leader companion!", null);
                 return new Tuple<bool, TextObject>(false, textObject);
             }
 
-            if(leftMemberRoster.TotalManCount > _requestedRecruitCount - _deliveredRecruitCount)
+            if (leftMemberRoster.TotalManCount > _requestedRecruitCount - _deliveredRecruitCount)
             {
-                TextObject textObject = new TextObject("You can choose max "+_requestedRecruitCount+" soldier!", null);
+                TextObject textObject = new TextObject("You can choose max " + _requestedRecruitCount + " soldier!", null);
                 return new Tuple<bool, TextObject>(false, textObject);
             }
 
             return new Tuple<bool, TextObject>(true, null);
         }
 
-        private bool IsTroopTransferable(CharacterObject character, PartyScreenLogic.TroopType type, PartyScreenLogic.PartyRosterSide side, PartyBase leftOwnerParty)
+        private bool IsTroopTransferable(CharacterObject character, PartyScreenLogic.TroopType type, PartyRosterSide side, PartyBase leftOwnerParty)
         {
             bool leftToRight = false;
 
-            if (_truvaTroop != null && side == PartyScreenLogic.PartyRosterSide.Left)
+            if (_truvaTroop != null && side == PartyRosterSide.Left)
                 leftToRight = false;
 
             if (_truvaTroop == null)
                 leftToRight = true;
 
-            if (side == PartyScreenLogic.PartyRosterSide.Left && !character.HasFlag("TruvaTroop"))
+            if (side == PartyRosterSide.Left && !character.HasFlag("TruvaTroop"))
+            {
                 leftToRight = true;
 
-            return this._requestedRecruitCount - this._deliveredRecruitCount >= 0 &&
-                ((side == PartyScreenLogic.PartyRosterSide.Right && (character.Tier > 1 || character.IsHero)) || (leftToRight));
+            }
+
+            return _requestedRecruitCount - _deliveredRecruitCount >= 0 &&
+                (side == PartyRosterSide.Right && (character.Tier > 1 || character.IsHero) || leftToRight);
         }
 
         private bool DoneClicked(TroopRoster leftMemberRoster, TroopRoster leftPrisonRoster, TroopRoster rightMemberRoster, TroopRoster rightPrisonRoster, FlattenedTroopRoster takenPrisonerRoster, FlattenedTroopRoster releasedPrisonerRoster, bool isForced, PartyBase leftParty, PartyBase rightParty)
@@ -148,15 +152,11 @@ namespace Truva
             return false;
         }
 
-        /*
-         *Tüm trooplar alınmış truva troop silinsin mi popup ı
-         */
-        private bool InquiryResultRemove()
+        private void InquiryResultRemove()
         {
             InformationManager.ShowInquiry(new InquiryData(new TextObject("Info", null).ToString(), new TextObject(_targetSettlement + " Truva Troop will be removed. Are you sure?", null).ToString(),
-            true, true, new TextObject("{=yS7PvrTD}OK", null).ToString(), new TextObject("Cancel", null).ToString(), OnOkClickedToRemove, null, "", 0f, null, null, null), false, false);
+            true, true, new TextObject("{=yS7PvrTD}OK", null).ToString(), new TextObject("Cancel", null).ToString(), OnOkClickedToRemove, null, "", 0f, null, null, null), false, true);
 
-            return true;
         }
 
         private void OnOkClickedToRemove()
@@ -164,25 +164,36 @@ namespace Truva
             TruvaCampaignBehavior.TruvaTroops.Remove(TruvaHelper.FindTruvaTroop(_truvaTroop.SettlementId));
             OnTruvaTroopCanceledOrDestroyedEvent?.Invoke(_truvaTroop.SettlementId);
 
-            PartyScreenManager.CloseScreen(true,true);
+            PartyScreenManager.CloseScreen(true, true);
         }
 
         private void InquiryResultPay(bool isManaging)
         {
-
             TextObject textObject;
+            int playerGold = Clan.PlayerClan.Gold;
+            int totalWage = 0;
 
             if (!isManaging)
             {
-                float totalWage = TruvaHelper.GetTroopWage(_troopRoster) * TruvaModel.WageMultiplier;
-                textObject = new TextObject(_targetSettlement + " Truva Troop will cost you " + totalWage + "{GOLD_ICON}. Do you want to create it?", null);
-
+                totalWage = TruvaHelper.GetTroopWage(_troopRoster) * TruvaModel.WageMultiplier;
+                textObject = new TextObject(_targetSettlement + " Truva Troop will cost you " + CampaignUIHelper.GetAbbreviatedValueTextFromValue(totalWage) + "{GOLD_ICON}. Do you want to create it?", null);
             }
             else
             {
                 TroopRoster newlyAddedTroopRoster = TruvaHelper.GetNewlyAddedTroopRoster(_oldTroopRoster, _troopRoster);
-                float totalWage = TruvaHelper.GetTroopWage(newlyAddedTroopRoster) * TruvaModel.WageMultiplier;
-                textObject = new TextObject("Newly added Troop will cost you " + totalWage + "{GOLD_ICON}. Do you want to continue?", null);
+                totalWage = TruvaHelper.GetTroopWage(newlyAddedTroopRoster) * TruvaModel.WageMultiplier;
+                textObject = new TextObject("Newly added Troop will cost you " + CampaignUIHelper.GetAbbreviatedValueTextFromValue(totalWage) + "{GOLD_ICON}. Do you want to continue?", null);
+            }
+
+            if (totalWage > playerGold)
+            {
+                string totalWageStr = CampaignUIHelper.GetAbbreviatedValueTextFromValue(totalWage);
+                string playerGoldStr = CampaignUIHelper.GetAbbreviatedValueTextFromValue(playerGold);
+                string differenceStr = CampaignUIHelper.GetAbbreviatedValueTextFromValue(totalWage - playerGold);
+
+                InformationManager.ShowInquiry(new InquiryData(new TextObject("Info", null).ToString(), new TextObject("Insufficient gold! The cost of the troop is " + totalWageStr + "{GOLD_ICON} but you have only " + playerGoldStr + "{GOLD_ICON}. You need " + differenceStr + "{GOLD_ICON} more!", null).ToString(),
+                true, false, new TextObject("{=yS7PvrTD}OK", null).ToString(), null, null, null, "", 0f, null, null, null), false, true);
+                return;
             }
 
             textObject.SetTextVariable("GOLD_ICON", "{=!}<img src=\"General\\Icons\\Coin@2x\" extend=\"8\">");
@@ -191,6 +202,8 @@ namespace Truva
 true, true, new TextObject("Yes", null).ToString(), new TextObject("Cancel", null).ToString(), OnOkClickedToPay, null, "", 0f, null, null, null), false, false);
 
         }
+
+
 
         private void OnOkClickedToPay()
         {

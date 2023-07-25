@@ -43,11 +43,7 @@ namespace Truva
             _troopRoster = truvaTroopRoster;
             _settlementId = settlementId;
             _isArrivedToSettlement = false;
-
-            for (int i = 0; i < _troopRoster.Count; i++)
-            {
-                _troopRoster.GetCharacterAtIndex(i).SetFlag("TruvaTroop");
-            }
+            SetFlags();
         }
 
         public TextObject SettlementName
@@ -142,6 +138,14 @@ namespace Truva
         public void OnTimeIsUp()
         {
             IsOnTheWay = false;
+        }
+
+        public void SetFlags()
+        {
+            for (int i = 0; i < _troopRoster.Count; i++)
+            {
+                _troopRoster.GetCharacterAtIndex(i).SetFlag("TruvaTroop");
+            }
         }
 
     }

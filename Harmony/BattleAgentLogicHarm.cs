@@ -6,7 +6,7 @@ using TaleWorlds.Core;
 using TaleWorlds.Library;
 using TaleWorlds.MountAndBlade;
 
-namespace Truva.Hamony
+namespace Truva.Harmony
 {
     [HarmonyPatch(typeof(BattleAgentLogic), nameof(BattleAgentLogic.OnAgentBuild))]
     public class BattleAgentLogicHarm

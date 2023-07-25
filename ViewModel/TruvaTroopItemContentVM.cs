@@ -48,17 +48,13 @@ namespace Truva.ViewModel
         public void ManageTroop()
         {
             //InformationManager.DisplayMessage(new InformationMessage("Edit Troop", Colors.Magenta));
-            ScreenManager.PopScreen();
             Campaign.Current.GetCampaignBehavior<TruvaCampaignBehavior>().OpenTruvaTroopMenu(true,_truvaTroop, Settlement.Find(_truvaTroop.SettlementId));
         }
 
         public void RemoveTroop()
         {
             //InformationManager.DisplayMessage(new InformationMessage("Remove Troop", Colors.Magenta));
-            Campaign.Current.GetCampaignBehavior<TruvaCampaignBehavior>().RemoveTruvaTroop(_truvaTroop);
-
-            ScreenManager.PopScreen();
-            ScreenManager.PushScreen(ViewCreatorManager.CreateScreenView<TruvaTroopScreen>());
+            Campaign.Current.GetCampaignBehavior<TruvaCampaignBehavior>().RemoveTruvaTroop(_truvaTroop,false,true);
 
             //_truvaTroopVM.RefreshValues();
         }
@@ -69,24 +65,6 @@ namespace Truva.ViewModel
 
         [DataSourceProperty]
         public bool IsWayTextVisible { get => !_truvaTroop.IsOnTheWay; }
-
-
-        /*
-         Bu kısımda hızlıca güncelleme gerektiği için tekrar push etme gerek onu bi düşün nasıl yapılabilir de buradan bağımsızlaştırılabilir
-         */
-
-
-        //private void OnTruvaTroopDestroyed(string settlementId)
-        //{
-        //    Campaign.Current.GetCampaignBehavior<TruvaCampaignBehavior>().RemoveTruvaTroop(_truvaTroop);
-
-        //    Task.Delay(1000).ContinueWith(t => PushScreenAgain());
-        //}
-
-        //private void PushScreenAgain()
-        //{
-        //    ScreenManager.PushScreen(ViewCreatorManager.CreateScreenView<TruvaTroopScreen>());
-        //}
 
     }
 }

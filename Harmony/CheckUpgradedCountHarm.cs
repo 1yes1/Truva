@@ -10,17 +10,15 @@ using TaleWorlds.Core;
 using TaleWorlds.Library;
 using TaleWorlds.MountAndBlade;
 
-namespace Truva.Hamony
+namespace Truva.Harmony
 {
     [HarmonyPatch(typeof(TroopUpgradeTracker), nameof(TroopUpgradeTracker.CheckUpgradedCount))]
     public class CheckUpgradedCountHarm
     {
         static bool Prefix(ref int __result, TroopUpgradeTracker __instance, Dictionary<Tuple<PartyBase, CharacterObject>, int> ____upgradedRegulars, PartyBase party, CharacterObject character)
         {
-            //Şuan burası çalışıyorrr
             //__result = 1;
             //BasicCharacterObject troop = Game.Current.ObjectManager.GetObject<BasicCharacterObject>("imperial_elite_cataphract");
-            //InformationManager.DisplayMessage(new InformationMessage("aaaaaaaa: " + character.Name, Colors.Green));
 
             int result = 0;
             if (!character.IsHero)
